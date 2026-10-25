@@ -117,7 +117,7 @@ export class AiService {
   static async predictPatientRisk(patientId: string, authHeader?: string): Promise<any> {
     const patientQuery = `
       query GetPatientForRisk($id: ID!) {
-        patient(id: $id) {
+        patientById(id: $id) {
           id
           tenantId
           birthDate
@@ -140,13 +140,13 @@ export class AiService {
       }
     `;
 
-    const data = await CoreClientService.executeGraphQL<{ patient: any }>(
+    const data = await CoreClientService.executeGraphQL<{ patientById: any }>(
       patientQuery,
       { id: patientId },
       authHeader,
     );
 
-    const patient = data?.patient;
+    const patient = data?.patientById;
     if (!patient) {
       throw new Error(`Paciente con ID ${patientId} no encontrado en el Core.`);
     }
