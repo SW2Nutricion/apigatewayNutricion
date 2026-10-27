@@ -3,6 +3,7 @@ import { config } from '../config/env.js';
 import { DocumentsService } from '../services/documents.service.js';
 import { AiService } from '../services/ai.service.js';
 import { PaymentsService } from '../services/payments.service.js';
+import { CoreClientService } from '../services/core-client.service.js';
 
 export const graphqlRouter = Router();
 
@@ -36,7 +37,7 @@ graphqlRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
     const authHeader = req.authHeader || (req.headers['authorization'] as string);
 
     // 1. Intercepción: Generación de PDF de Dieta (Spring Boot)
-    if (typeof query === 'string' && (query.includes('generateDietPdf') || operationName === 'GenerateDietPdf')) {
+    if (operationName === 'GenerateDietPdf') {
       const dietId = variables?.id || extractArgument(query, 'generateDietPdf', 'id');
       if (dietId) {
         const pdfResult = await DocumentsService.generateDietPdf(dietId, authHeader);
@@ -49,7 +50,7 @@ graphqlRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
     }
 
     // 2. Intercepción: Segmentación de Pacientes IA (FastAPI)
-    if (typeof query === 'string' && (query.includes('analyzeTenantSegmentation') || operationName === 'AnalyzeTenantSegmentation')) {
+    if (operationName === 'AnalyzeTenantSegmentation') {
       const segResult = await AiService.analyzeTenantSegmentation(authHeader);
       return res.json({
         data: {
@@ -59,7 +60,7 @@ graphqlRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
     }
 
     // 3. Intercepción: Predicción de Riesgo IA (FastAPI)
-    if (typeof query === 'string' && (query.includes('patientRiskPrediction') || operationName === 'PatientRiskPrediction')) {
+    if (operationName === 'PatientRiskPrediction') {
       const patientId = variables?.patientId || extractArgument(query, 'patientRiskPrediction', 'patientId');
       if (patientId) {
         const riskResult = await AiService.predictPatientRisk(patientId, authHeader);
@@ -79,13 +80,50 @@ graphqlRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
     }
 
     // 4. Intercepción: Planes de Suscripción (Payments Microservice)
-    if (typeof query === 'string' && (query.includes('subscriptionPlans') || operationName === 'SubscriptionPlans')) {
+    if (operationName === 'SubscriptionPlans') {
       const plans = await PaymentsService.findPlans(authHeader);
       return res.json({
         data: {
-          subscriptionPlans: plans,
+          subscriptionPlans: plans.map(PaymentsService.toGraphqlPlan),
         },
       });
+    }
+
+    if (operationName && isPaymentOperation(operationName)) {
+      const tenantSlug = await getCurrentTenantSlug(authHeader);
+
+      if (operationName === 'CurrentTenantSubscription') {
+        const subscription = await PaymentsService.findCurrentTenantSubscription(tenantSlug, authHeader);
+        return res.json({ data: { currentTenantSubscription: PaymentsService.toGraphqlSubscription(subscription) } });
+      }
+
+      if (operationName === 'PlanChangeRequests') {
+        const requests = await PaymentsService.findPlanChangeRequests(tenantSlug, authHeader);
+        return res.json({ data: { planChangeRequests: requests } });
+      }
+
+      if (operationName === 'CheckoutSessionStatus') {
+        const sessionId = variables?.sessionId || extractArgument(query, 'checkoutSessionStatus', 'sessionId');
+        const status = await PaymentsService.getCheckoutSessionStatus(sessionId, authHeader);
+        return res.json({ data: { checkoutSessionStatus: status } });
+      }
+
+      if (operationName === 'RequestPlanChange') {
+        const input = variables?.input || {};
+        const result = await PaymentsService.requestPlanChange(tenantSlug, input, authHeader);
+        return res.json({ data: { requestPlanChange: result } });
+      }
+
+      if (operationName === 'PaySubscription') {
+        const result = await PaymentsService.paySubscription(tenantSlug, authHeader);
+        return res.json({ data: { paySubscription: result } });
+      }
+
+      if (operationName === 'CreateInitialCheckoutSession') {
+        const input = variables?.input || {};
+        const result = await PaymentsService.createInitialCheckoutSession(tenantSlug, input.planCode, authHeader);
+        return res.json({ data: { createInitialCheckoutSession: result } });
+      }
     }
 
     // 5. Reenvío por defecto al Core (PostgreSQL, Auth, Pacientes, Citas, etc.)
@@ -116,4 +154,27 @@ function extractArgument(query: string, fieldName: string, argName: string): str
   const regex = new RegExp(`${fieldName}\\s*\\([^)]*${argName}\\s*:\\s*["']?([^"',\\s)]+)["']?`, 'i');
   const match = query.match(regex);
   return match ? match[1] : null;
+}
+
+function isPaymentOperation(operationName: string) {
+  return new Set([
+    'CurrentTenantSubscription',
+    'PlanChangeRequests',
+    'CheckoutSessionStatus',
+    'RequestPlanChange',
+    'PaySubscription',
+    'CreateInitialCheckoutSession',
+  ]).has(operationName);
+}
+
+async function getCurrentTenantSlug(authHeader?: string) {
+  const data = await CoreClientService.executeGraphQL<{ currentTenant: { slug: string } }>(
+    'query CurrentTenant { currentTenant { slug } }',
+    {},
+    authHeader,
+  );
+  if (!data.currentTenant?.slug) {
+    throw new Error('No se pudo resolver el tenant actual para pagos.');
+  }
+  return data.currentTenant.slug;
 }

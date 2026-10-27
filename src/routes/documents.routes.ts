@@ -40,7 +40,15 @@ const springBootProxy = createProxyMiddleware({
   target: config.springBootServiceUrl,
   changeOrigin: true,
   on: {
-    proxyReq: onProxyReqForwardAuth,
+    proxyReq: (proxyReq, req) => {
+  onProxyReqForwardAuth(proxyReq, req as Request);
+  if (!config.internalServiceKey) {
+    proxyReq.destroy(new Error('INTERNAL_SERVICE_KEY no está configurada en el gateway'));
+    return;
+  }
+  proxyReq.setHeader('x-internal-service-key', config.internalServiceKey);
+  proxyReq.setHeader('x-correlation-id', (req as Request).correlationId || '');
+    },
   },
 });
 

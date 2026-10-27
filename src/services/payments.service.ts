@@ -63,6 +63,20 @@ export interface PaymentsRequestOptions {
 }
 
 export class PaymentsService {
+  static toGraphqlPlan(plan: PaymentsPlanResponse) {
+    return { ...plan, limits: this.toLimitList(plan.limits) };
+  }
+
+  static toGraphqlSubscription(subscription: PaymentsSubscriptionResponse | null) {
+    return subscription
+      ? { ...subscription, limits: this.toLimitList(subscription.limits) }
+      : null;
+  }
+
+  private static toLimitList(limits: Record<string, string> | undefined) {
+    return Object.entries(limits || {}).map(([key, value]) => ({ key, value }));
+  }
+
   private static async request<T>(path: string, init: PaymentsRequestOptions = {}): Promise<T> {
     const baseUrl = config.paymentsServiceUrl;
     const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;

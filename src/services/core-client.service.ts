@@ -23,14 +23,20 @@ export class CoreClientService {
       headers['authorization'] = authHeader;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.timeouts.core);
     const response = await fetch(config.coreGraphqlUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify({ query, variables }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Core GraphQL falló con status ${response.status}: ${response.statusText}`);
+      const error = new Error(`Core GraphQL falló con status ${response.status}: ${response.statusText}`);
+      Object.assign(error, { status: response.status });
+      throw error;
     }
 
     const json = (await response.json()) as CoreGraphQLResponse<T>;
@@ -61,10 +67,14 @@ export class CoreClientService {
       headers['authorization'] = authHeader;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.timeouts.core);
     const response = await fetch(url, {
       ...options,
       headers,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Core REST error [${response.status}] en ${endpoint}: ${response.statusText}`);

@@ -18,6 +18,10 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(requestLogger);
 app.use(authForwarderMiddleware);
+app.use((req, res, next) => {
+  res.setHeader('X-Correlation-Id', req.correlationId || 'unknown');
+  next();
+});
 
 // Rutas del Gateway
 app.use('/health', healthRouter);

@@ -73,9 +73,11 @@ export class DocumentsService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(config.internalServiceKey ? { 'X-Internal-Service-Key': config.internalServiceKey } : {}),
         ...(authHeader ? { authorization: authHeader } : {}),
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(config.timeouts.documents),
     });
 
     if (!response.ok) {
@@ -110,9 +112,11 @@ export class DocumentsService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(config.internalServiceKey ? { 'X-Internal-Service-Key': config.internalServiceKey } : {}),
         ...(authHeader ? { authorization: authHeader } : {}),
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(config.timeouts.documents),
     });
 
     if (!response.ok) {

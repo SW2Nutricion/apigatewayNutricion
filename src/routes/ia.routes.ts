@@ -39,7 +39,12 @@ const aiProxy = createProxyMiddleware({
     proxyReq: (proxyReq, req) => {
       onProxyReqForwardAuth(proxyReq, req as Request);
       // Inyección automática de la clave de seguridad del microservicio de IA
+      if (!config.aiApiKey) {
+        proxyReq.destroy(new Error('AI_API_KEY no está configurada en el gateway'));
+        return;
+      }
       proxyReq.setHeader('x-api-key', config.aiApiKey);
+      proxyReq.setHeader('x-correlation-id', (req as Request).correlationId || '');
     },
   },
 });

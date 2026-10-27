@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 
 export function errorHandler(
   err: any,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
@@ -15,6 +15,7 @@ export function errorHandler(
     success: false,
     statusCode: status,
     error: message,
+    correlationId: req.correlationId,
     timestamp: new Date().toISOString(),
   });
 }

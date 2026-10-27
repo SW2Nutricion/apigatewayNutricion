@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { ClientRequest } from 'http';
+import crypto from 'crypto';
 
 declare global {
   namespace Express {
     interface Request {
       authHeader?: string;
+      correlationId?: string;
     }
   }
 }
@@ -18,6 +20,7 @@ export function authForwarderMiddleware(req: Request, _res: Response, next: Next
   if (typeof auth === 'string' && auth.trim().length > 0) {
     req.authHeader = auth;
   }
+  req.correlationId = req.headers['x-correlation-id']?.toString() || crypto.randomUUID();
   next();
 }
 
@@ -30,4 +33,10 @@ export function onProxyReqForwardAuth(proxyReq: ClientRequest, req: Request): vo
   if (auth && typeof auth === 'string') {
     proxyReq.setHeader('authorization', auth);
   }
+}
+
+export function setInternalHeaders(headers: Record<string, string>, req: Request): Record<string, string> {
+  const result = { ...headers };
+  if (req.correlationId) result['X-Correlation-Id'] = req.correlationId;
+  return result;
 }
