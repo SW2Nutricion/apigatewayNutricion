@@ -8,7 +8,6 @@ import { healthRouter } from './routes/health.routes.js';
 import { graphqlRouter } from './routes/graphql.routes.js';
 import { documentsRouter } from './routes/documents.routes.js';
 import { iaRouter } from './routes/ia.routes.js';
-import { paymentsRouter } from './routes/payments.routes.js';
 
 const app = express();
 
@@ -28,7 +27,6 @@ app.use('/health', healthRouter);
 app.use('/graphql', graphqlRouter);
 app.use('/api/v1/documents', documentsRouter);
 app.use('/api/v1/ia', iaRouter);
-app.use('/api/v1/payments', paymentsRouter);
 
 // Ruta raíz con información del gateway
 app.get('/', (_req, res) => {
@@ -41,13 +39,11 @@ app.get('/', (_req, res) => {
       graphql: '/graphql',
       documents: '/api/v1/documents',
       ia: '/api/v1/ia',
-      payments: '/api/v1/payments',
     },
     downstreamServices: {
       core: config.coreServiceUrl,
       springBoot: config.springBootServiceUrl,
       ia: config.aiServiceUrl,
-      payments: config.paymentsServiceUrl,
     },
   });
 });
@@ -63,7 +59,6 @@ app.listen(config.port, () => {
   console.log(`🔗 Core Backend (Auth & PostgreSQL): ${config.coreServiceUrl}`);
   console.log(`📄 Spring Boot (Documentos / PDF): ${config.springBootServiceUrl}`);
   console.log(`🧠 Backend IA (FastAPI): ${config.aiServiceUrl}`);
-  console.log(`💳 Payments Service: ${config.paymentsServiceUrl}`);
   console.log(`🔒 Reenvío de Authorization: ACTIVO (Unmodified Bearer)`);
   console.log(`=======================================================`);
 });

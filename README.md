@@ -11,7 +11,6 @@ Desacopla completamente el backend `vitalBite-backend-core` de dependencias HTTP
 - **Core Backend (`vitalBite-backend-core`)**: Dominio de negocio, persistencia en PostgreSQL con Prisma y autenticación JWT.
 - **Microservicio Documental (`vitalBite-Spring-Boot`)**: Generación de documentos PDF (`dieta.pdf`, `factura.pdf`) y gestión documental.
 - **Microservicio de IA (`vitalBite-backend-ia`)**: Algoritmos de Machine Learning y Deep Learning (Random Forest, K-means, OCR y CNN).
-- **Microservicio de Pagos**: Gestión de suscripciones, cambios de plan y pasarela de pagos.
 
 ```
                     ┌──────────────────────────┐
@@ -22,14 +21,14 @@ Desacopla completamente el backend `vitalBite-backend-core` de dependencias HTTP
                     ┌──────────────────────────┐
                     │  vitalBite-api-gateway   │ (Puerto 4000)
                     └────────────┬─────────────┘
-         ┌───────────────────────┼──────────────────────────┬────────────────────────┐
-         │ (Reenvío sin modif.)  │                          │                        │
-         ▼                       ▼                          ▼                        ▼
-┌─────────────────┐    ┌───────────────────┐      ┌──────────────────┐     ┌──────────────────┐
-│  backend-core   │    │  backend-ia       │      │  Spring-Boot     │     │  payments-svc    │
-│  (PostgreSQL)   │    │  (FastAPI)        │      │  (Documental)    │     │  (Suscripciones) │
-│  Puerto 3000    │    │  Puerto 8001      │      │  Puerto 8082     │     │  Puerto 5100     │
-└─────────────────┘    └───────────────────┘      └──────────────────┘     └──────────────────┘
+         ┌───────────────────────┼──────────────────────────┐
+         │ (Reenvío sin modif.)  │                          │
+         ▼                       ▼                          ▼
+┌─────────────────┐    ┌───────────────────┐      ┌──────────────────┐
+│  backend-core   │    │  backend-ia       │      │  Spring-Boot     │
+│  (PostgreSQL)   │    │  (FastAPI)        │      │  (Documental)    │
+│  Puerto 3000    │    │  Puerto 8001      │      │  Puerto 8082     │
+└─────────────────┘    └───────────────────┘      └──────────────────┘
 ```
 
 ## Reenvío del Header `Authorization`
@@ -44,13 +43,11 @@ Cualquier header `Authorization` (ej. `Bearer <jwt>`) recibido desde el cliente 
   - `generateDietPdf`: Orquesta la consulta del plan en el Core y la compilación en Spring Boot.
   - `analyzeTenantSegmentation`: Orquesta la extracción de métricas de pacientes y el análisis K-Means en FastAPI.
   - `patientRiskPrediction`: Orquesta la recopilación de mediciones y la inferencia Random Forest en FastAPI.
-  - `subscriptionPlans`: Consulta los planes en el microservicio de pagos.
   - El resto de consultas y mutaciones se transfieren íntegramente al Core.
 - `GET /graphql`: Interfaz GraphiQL / Playground proxificada desde el Core.
 - `POST /api/v1/documents/pdf/diet/:dietId`: Orquestación directa REST de generación de PDF para una dieta.
 - `/api/v1/documents/*`: Proxy hacia el microservicio Spring Boot.
 - `/api/v1/ia/*`: Proxy hacia el microservicio FastAPI (con inyección automática de `X-API-Key`).
-- `/api/v1/payments/*`: Endpoints y proxy hacia el microservicio de pagos y suscripciones.
 
 ## Instalación y Ejecución
 

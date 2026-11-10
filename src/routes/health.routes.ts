@@ -17,14 +17,13 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
     }
   };
 
-  const [core, springBoot, ia, payments] = await Promise.all([
+  const [core, springBoot, ia] = await Promise.all([
     checkService('core', config.coreServiceUrl),
     checkService('springBoot', config.springBootServiceUrl, '/api/v1/documents/pdf'),
     checkService('ia', config.aiServiceUrl, '/api/v1/health'),
-    checkService('payments', config.paymentsServiceUrl, '/plans'),
   ]);
 
-  const statuses = [core.status, springBoot.status, ia.status, payments.status];
+  const statuses = [core.status, springBoot.status, ia.status];
   const gatewayStatus = statuses.includes('down') ? 'degraded' : 'up';
   res.status(gatewayStatus === 'up' ? 200 : 503).json({
     status: gatewayStatus,
@@ -38,13 +37,11 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
       core: core.status,
       documents: springBoot.status,
       ia: ia.status,
-      payments: payments.status,
     },
     downstream: {
       core: { url: config.coreServiceUrl, ...core },
       springBoot: { url: config.springBootServiceUrl, ...springBoot },
       ia: { url: config.aiServiceUrl, ...ia },
-      payments: { url: config.paymentsServiceUrl || null, ...payments },
     },
   });
 });
